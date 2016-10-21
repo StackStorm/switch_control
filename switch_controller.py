@@ -67,19 +67,29 @@ class SwitchAPI(MethodView):
     def get(self):  # pylint: disable=no-self-use
         """ Get current state of LED settings.
         """
+        red = _SWITCHES.red
+        green = _SWITCHES.green
+        blue = _SWITCHES.blue
+        change = _SWITCHES.change
+
+        if _SWITCHES.on_change:
+            _SWITCHES.on_change = False
+            change = True
+            red = 100
+            green = 100
+            blue = 100
+
         switch_state = {
             "is_on": _SWITCHES.is_on,
-            "change": _SWITCHES.change,
-            "red": _SWITCHES.red,
-            "green": _SWITCHES.green,
-            "blue": _SWITCHES.blue,
+            "change": change,
+            "red": red,
+            "green": green,
+            "blue": blue,
         }
-
-        _SWITCHES.change_state(False)
 
         return jsonify(switch_state)
 
-SWITCH_API.add_url_rule('/switches/', view_func=SwitchAPI.as_view('switchess'))
+SWITCH_API.add_url_rule('/switches/', view_func=SwitchAPI.as_view('switches'))
 
 
 class Switches(object):
@@ -90,13 +100,13 @@ class Switches(object):
 
         self.is_on = False
         self.change = False
+        self.on_change = False
 
         self.red = 0
         self.green = 0
         self.blue = 0
 
         self.run = True
-        self._switch_state = False
 
     def _monitor_switch(self, switch, on_callback, off_callback):
         prev_state = False
@@ -135,16 +145,6 @@ class Switches(object):
             )
         )
         switch.start()
-
-    def get_state(self):
-        """ Return bool of if switch state has changed or not
-        """
-        return self._switch_state
-
-    def change_state(self, state):
-        """ Return bool of if switch state has changed or not
-        """
-        self._switch_state = state
 
     def shutdown(self):
         """ Shutdown all switch instances
@@ -196,10 +196,12 @@ def _start_rgb_thread():
 
 def _on_off_switch_on():
     _SWITCHES.is_on = True
+    _SWITCHES.on_change = True
 
 
 def _on_off_switch_off():
     _SWITCHES.is_on = False
+    _SWITCHES.on_change = False
 
 
 def _rgb_switch_on():
